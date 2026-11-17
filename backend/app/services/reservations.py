@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 async def calculate_monthly_revenue(property_id: str, tenant_id: str, month: int, year: int, db_session=None) -> Decimal:
     """
@@ -97,3 +97,21 @@ async def calculate_total_revenue(property_id: str, tenant_id: str) -> Dict[str,
         "currency": "USD",
         "count": 0
     }
+
+async def list_properties(tenant_id: str) -> List[Dict[str, str]]:
+    """
+    Lists the properties that belong to a tenant.
+    """
+    from app.core.database_pool import db_pool
+    from sqlalchemy import text
+
+    # Initialize the shared pool only if it is not ready yet
+    if not db_pool.session_factory:
+        await db_pool.initialize()
+
+    async with db_pool.get_session() as session:
+        result = await session.execute(
+            text("SELECT id, name FROM properties WHERE tenant_id = :tenant_id ORDER BY id"),
+            {"tenant_id": tenant_id},
+        )
+        return [{"id": row.id, "name": row.name} for row in result.fetchall()]
